@@ -1,7 +1,7 @@
 --====================================================================--
 -- dmc_corona/dmc_e4x.lua
 --
--- Documentation: http://docs.davidmccuskey.com/
+-- Documentation: https://github.com/dmccuskey/dmc-e4x
 --====================================================================--
 
 --[[
