@@ -27,7 +27,7 @@ print( xml.book[1]['@ISBN']:toString() )    --> 0942407296
 - `toXmlString()` writes a node back out as XML
 - Pure Lua, no plugins needed; MIT licensed
 
-It reads well-formed, simple XML: elements, attributes, text. It doesn't understand CDATA, comments or DTDs, and element names with `_` or `.` are read wrong; see [Known Issues](#known-issues) before using it on XML you don't control.
+It reads elements, attributes, text and CDATA, and skips comments, processing instructions and the `<!DOCTYPE>`. It doesn't validate, and some E4X behavior differs; see [Known Issues](#known-issues) before using it on XML you don't control.
 
 ## Quick Start
 
@@ -109,7 +109,7 @@ print( xml.book[2]:toXmlString() )
 
 The Simulator restarts the app when the file is saved. Each book's title and ISBN is on screen, and the console also shows the second book written back out as XML, on one line.
 
-`nodes()` loops over a list; `[2]` picks one node from it (lists start at 1). `'@ISBN'` reads an attribute. The attributes in `toXmlString()` may come out in another order.
+`nodes()` loops over a list; `[2]` picks one node from it (lists start at 1). `'@ISBN'` reads an attribute. `toXmlString()` writes the attributes in the order they're written in the XML.
 
 **Going further:** every method on lists and nodes ([lua-e4x API reference](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md)).
 
@@ -117,7 +117,7 @@ To update, copy `dmc_corona_boot.lua` and `dmc_corona/` again from the newer ver
 
 ## Documentation
 
-`require 'dmc_corona.dmc_e4x'` returns lua-e4x's module, so its documentation applies as written:
+`require 'dmc_corona.dmc_e4x'` returns a copy of lua-e4x's module (0.2.0) with `VERSION` added, so its documentation applies as written:
 
 - [API reference](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md): the module, [Lists and Nodes](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md#lists-and-nodes), dot traversal, attributes, every method
 - [Known Issues](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md#known-issues) of the parser
@@ -128,14 +128,16 @@ dmc-e4x has no settings: `dmc_corona.cfg` needs no section for it, only the `[DM
 
 ## Known Issues
 
-The bugs of the parser are in lua-e4x's [Known Issues](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md#known-issues); the ones most likely to be met: element names with `_` or `.` are cut short (`<first_name>` is read as `first`), CDATA sections raise an error, and searching an element that holds text next to child elements raises `attempt to call method 'name' (a nil value)`. In `dmc_e4x.lua`:
+The parser's are in lua-e4x's [Known Issues](https://github.com/dmccuskey/lua-e4x/blob/master/docs/api.md#known-issues); the ones most likely to be met:
 
-- It sets the global `_extend` (its copy of `Utils.extend()` declares the inner function without `local`).
-- Its version (`0.1.0`) isn't available to code.
+- An element named like a method (`name`, `parent`, `length`, `children`, ...) gives the method in dot traversal: `xml.name` is a function. Use `xml:child( 'name' )`.
+- A missing element is `nil` when searched from a node and an empty list when searched from a list: `xml.missing:length()` is an error, `xml.book.missing:length()` is 0. Check for `nil` when a path starts from a node, or use `child()`, which always returns a list.
+
+dmc-e4x itself has none known.
 
 ## Development
 
-Only `dmc_corona/dmc_e4x.lua` is written in this repository. It loads the DMC boot loader and returns lua-e4x's module from `lib.dmc_lua.lua_e4x`. Everything else is a generated copy; fix it in its own repository, then rebuild:
+Only `dmc_corona/dmc_e4x.lua` and `tests/` are written in this repository. `dmc_e4x.lua` loads the DMC boot loader and returns a copy of lua-e4x's module from `lib.dmc_lua.lua_e4x`, with `VERSION`; the shared module is left as it is. Everything else is a generated copy; fix it in its own repository, then rebuild:
 
 | file | owner |
 |---|---|
@@ -148,7 +150,13 @@ The copies are made by Snakemake from sibling checkouts of the repositories abov
 snakemake --cores 1 build_all
 ```
 
-dmc-e4x has no tests of its own; lua-e4x's are in its `spec/`. The Quick Start is the check that the package loads in Solar2D.
+The unit tests check the wrapper and that lua-e4x's fixes come through it; lua-e4x's full specs are in its `spec/`. They run under plain Lua 5.1 with dkjson, with stand-ins for the Solar2D globals the boot loader uses. From the repository's root folder:
+
+```sh
+tests/run_unit.sh
+```
+
+The Quick Start is the check that the package loads in Solar2D.
 
 ## License
 
